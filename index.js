@@ -12,8 +12,6 @@ app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.2vavvcj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
-// const uri = "mongodb+srv://<db_username>:<db_password>@cluster0.2vavvcj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
     serverApi: {
@@ -27,14 +25,22 @@ async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
+
         const dataBase = client.db('COFFEE_DB');
         const coffeeCollection = dataBase.collection('coffees');
+
 
         app.get('/coffees', async (req, res) => {
             // const cursor = coffeeCollection.find();
             // const result = await cursor.toArray();
             const result = await coffeeCollection.find().toArray();
+            res.send(result);
+        })
 
+        app.get('/coffees/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await coffeeCollection.findOne(query);
             res.send(result);
         })
 
@@ -46,6 +52,18 @@ async function run() {
             res.send(result);
         })
 
+        app.put('/coffees/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true };
+            const updatedCoffee = req.body;
+            const updateDoc = {
+                $set: updatedCoffee
+            }
+            const result = await coffeeCollection.updateOne(filter, updateDoc, options);
+            res.send(result);
+        })
+
         app.delete('/coffees/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
@@ -54,9 +72,9 @@ async function run() {
         })
 
 
-        // // Send a ping to confirm a successful connection
-        // await client.db("admin").command({ ping: 1 });
-        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // Send a ping to confirm a successful connection
+        await client.db("admin").command({ ping: 1 });
+        console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // // Ensures that the client will close when you finish/error
         // await client.close();
